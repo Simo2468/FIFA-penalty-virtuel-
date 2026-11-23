@@ -33,6 +33,18 @@ Compatible avec tout endpoint type OpenAI (changez `MISTRAL_BASE_URL` / `MISTRAL
 
 ## Utilisation
 
+### Version web (HTML)
+
+```bash
+python -m http.server 8000
+```
+
+Puis ouvrez http://localhost:8000. Ou double-cliquez simplement sur `index.html`.
+
+- Collez votre clé API dans le champ prévu (elle reste dans le **localStorage** de votre navigateur, jamais envoyée ailleurs que sur api.mistral.ai).
+- Sans clé, le bouton lance automatiquement le mode démo locale + moteur de secours.
+
+### Version terminal
 ```bash
 python main.py
 ```
