@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ FIFA Penalty Predictor Virtuel — 2 passes IA</title>
+<style>
+:root{
+  --fond:#0b1020; --carte:#141b33; --carte2:#1b2445; --bord:#2a3763;
+  --texte:#e8ecf8; --gris:#9aa6c8; --vert:#22c55e; --jaune:#facc15;
+  --cyan:#38bdf8; --magenta:#e879f9; --rouge:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:radial-gradient(1200px 600px at 50% -100px,#1e2a55,var(--fond));
+  color:var(--texte);min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:32px 16px;
+}
+h1{font-size:1.5rem;text-align:center;margin-bottom:4px}
+.sous{color:var(--gris);font-size:.9rem;text-align:center;margin-bottom:24px}
+.sous span{color:var(--jaune);font-weight:600}
+.carte{
+  background:var(--carte);border:1px solid var(--bord);border-radius:14px;
+  padding:20px;width:100%;max-width:760px;margin-bottom:18px;
+}
+.etiquette{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);margin:12px 0 6px}
+input[type=text],input[type=password]{
+  width:100%;background:var(--carte2);border:1px solid var(--bord);border-radius:8px;
+  color:var(--texte);padding:11px 13px;font-size:1rem;outline:none;
+}
+input:focus{border-color:var(--cyan)}
+input[type=password]{font-family:monospace}
+.aide{font-size:.74rem;color:var(--gris);margin-top:5px}
+.duo{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:end}
+.vs{font-weight:800;color:var(--magenta);font-size:1.3rem;padding-bottom:10px;align-self:center}
+button{
+  width:100%;margin-top:20px;padding:14px;font-size:1.05rem;font-weight:700;
+  color:#06121f;background:linear-gradient(90deg,#38bdf8,#22c55e);
+  border:none;border-radius:10px;cursor:pointer;transition:.2s;
+}
+button:hover{filter:brightness(1.12)}
+button:disabled{opacity:.5;cursor:not-allowed;filter:none}
+.passe{
+  display:flex;align-items:center;gap:12px;background:var(--carte2);
+  border:1px solid var(--bord);border-radius:10px;padding:13px 15px;margin-bottom:10px;
+  font-size:.92rem;
+}
+.passe .num{
+  min-width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:.8rem;background:var(--bord);color:var(--gris);
+}
+.passe.active .num{background:var(--jaune);color:#06121f;animation:pulse 1s infinite}
+.passe.fini .num{background:var(--vert);color:#06121f}
+.passe .nom{font-weight:700}
+.passe .statut{color:var(--gris);font-size:.8rem;margin-left:auto}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.resultat{display:none;text-align:center}
+.resultat.visible{display:block;animation:apparait .5s ease}
+@keyframes apparait{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.score-eq{display:flex;justify-content:center;align-items:center;gap:18px;margin:14px 0 6px;flex-wrap:wrap}
+.score-eq .nom-eq{font-size:1.05rem;font-weight:700;max-width:220px}
+.score-eq .chiffre{
+  font-size:2.6rem;font-weight:800;background:var(--carte2);border:1px solid var(--bord);
+  border-radius:12px;padding:4px 18px;min-width:64px;
+}
+.gagnant-band{
+  margin-top:18px;padding:16px;border-radius:12px;font-size:1.25rem;font-weight:800;
+  background:linear-gradient(90deg,rgba(34,197,94,.18),rgba(34,197,94,.05));
+  border:1px solid var(--vert);color:var(--vert);
+}
+.confiance{margin-top:8px;color:var(--gris);font-size:.85rem}
+.decisifs{margin-top:16px;text-align:left;list-style:none}
+.decisifs li{padding:5px 0;color:var(--texte);font-size:.9rem}
+.decisifs li::before{content:'⭐ ';color:var(--jaune)}
+.resume{margin-top:14px;color:var(--cyan);font-style:italic;font-size:.92rem}
+.mode{display:inline-block;margin-top:16px;font-size:.72rem;padding:4px 10px;border-radius:99px;border:1px solid var(--bord);color:var(--gris)}
+.avert{margin-top:14px;font-size:.72rem;color:var(--gris)}
+.pied{color:var(--gris);font-size:.74rem;text-align:center;max-width:640px;margin-top:6px}
+.erreur{display:none;margin-top:14px;padding:10px 14px;border:1px solid var(--rouge);border-radius:8px;color:var(--rouge);font-size:.85rem;text-align:left}
+@media(max-width:560px){.duo{grid-template-columns:1fr}.vs{display:none}}
+</style>
+</head>
+<body>
+
+<h1>⚽ FIFA PENALTY PREDICTOR VIRTUEL</h1>
+<p class="sous">Simulation de tirs au but — <span>2 passes IA</span> : SCOUT puis ORACLE</p>
+
+<div class="carte">
+  <label class="etiquette" for="cle">Clé API (recommandé)</label>
+  <input type="password" id="cle" placeholder="Collez votre clé API ici (reste dans votre navigateur)">
+  <p class="aide">La clé est conservée uniquement dans votre navigateur (localStorage) et envoyée directement à api.mistral.ai. Laissez vide pour le mode démo local.</p>
+
+  <div class="duo">
+    <div>
+      <label class="etiquette" for="eqA">Équipe A</label>
+      <input type="text" id="eqA" placeholder="Zénith FC">
+    </div>
+    <div class="vs">VS</div>
+    <div>
+      <label class="etiquette" for="eqB">Équipe B</label>
+      <input type="text" id="eqB" placeholder="Nova United">
+    </div>
+  </div>
+
+  <button id="btn" onclick="lancer()">🔮 Prédire le vainqueur</button>
+  <p class="erreur" id="erreur"></p>
+</div>
+
+<div class="carte resultat" id="resultat">
+  <div class="passe" id="passe1">
+    <div class="num">1/2</div>
+    <div><span class="nom">SCOUT</span><br><span style="font-size:.75rem;color:var(--gris)">Analyse des tireurs et du gardien</span></div>
+    <span class="statut" id="statut1">en attente…</span>
+  </div>
+  <div class="passe" id="passe2">
+    <div class="num">2/2</div>
+    <div><span class="nom">ORACLE</span><br><span style="font-size:.75rem;color:var(--gris)">Verdict final</span></div>
+    <span class="statut" id="statut2">en attente…</span>
+  </div>
+
+  <div id="verdict" style="display:none">
+    <p class="etiquette" style="text-align:center">Pronostic final (simulation virtuelle)</p>
+    <div class="score-eq">
+      <span class="nom-eq" id="nomA"></span><span class="chiffre" id="scA">0</span>
+      <span style="color:var(--gris);font-weight:700">-</span>
+      <span class="chiffre" id="scB">0</span><span class="nom-eq" id="nomB"></span>
+    </div>
+    <div class="gagnant-band" id="bandeGagnant"></div>
+    <p class="confiance">Confiance : <strong style="color:var(--vert)">100 %</strong> (simulation virtuelle)</p>
+    <ul class="decisifs" id="listeDecisifs"></ul>
+    <p class="resume" id="texteResume"></p>
+    <span class="mode" id="badgeMode"></span>
+    <p class="avert">⚠️ Divertissement uniquement : aucune IA ne peut prédire un vrai match à 100 %.</p>
+  </div>
+</div>
+
+<p class="pied">Vidéo de tirs au but 100 % virtuelle : la passe SCOUT génère les profils, la passe ORACLE tranche le verdict. Moteur local de secours si l'IA est indisponible.</p>
+
+<script>
+const JOUEURS = ["Mbappé","Haaland","Vinicius","Bellingham","Salah","Kane","Messi","Ronaldo","Neymar","Lautaro","Musiala","Saka"];
+const GARDIENS = ["Courtois","Donnarumma","Alisson","Martinez","Neuer","Maignan"];
+const SCORES_REELS = [[5,4],[5,3],[4,3],[4,2],[3,2],[5,2],[4,1],[3,1],[5,1],[3,0]];
+const BASE_URL = "https://api.mistral.ai/v1";
+const MODELE = "mistral-small-latest";
+const CLE_SAUVEGARDEE = localStorage.getItem("fifa_cle_api");
+if (CLE_SAUVEGARDEE) document.getElementById("cle").value = CLE_SAUVEGARDEE;
+document.getElementById("cle").addEventListener("input", e => localStorage.setItem("fifa_cle_api", e.target.value));
+
+const alea = a => a[Math.floor(Math.random() * a.length)];
+const entier = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+function equipe(nom){
+  const tireurs = [...JOUEURS].sort(() => Math.random() - .5).slice(0, 5);
+  return {
+    nom: nom || alea(["Zénith FC","Nova United","Étoile Royale","Atlas Club"]),
+    tireurs,
+    gardien: alea(GARDIENS),
+    mental: entier(60, 99),
+    forme: entier(60, 99)
+  };
+}
+
+function extraireJson(texte){
+  const d = texte.indexOf("{"), f = texte.lastIndexOf("}");
+  if (d === -1 || f === -1) throw new Error("pas de JSON");
+  return JSON.parse(texte.slice(d, f + 1));
+}
+
+async function appelLlm(cle, systeme, utilisateur, temperature){
+  const r = await fetch(BASE_URL + "/chat/completions", {
+    method: "POST",
+    headers: {"Authorization": "Bearer " + cle, "Content-Type": "application/json"},
+    body: JSON.stringify({
+      model: MODELE, temperature, max_tokens: 1500,
+      messages: [{role: "system", content: systeme}, {role: "user", content: utilisateur}]
+    })
+  });
+  if (!r.ok) throw new Error("API " + r.status);
+  const j = await r.json();
+  return j.choices[0].message.content;
+}
+
+function scoutLocal(a, b){
+  const profil = eq => ({
+    nom: eq.nom,
+    tireurs: eq.tireurs.map(j => ({joueur: j, precision: Math.min(99, 55 + eq.forme >> 2), sang_froid: Math.min(99, 50 + eq.mental / 3 | 0), coin_prefere: alea(["gauche","centre","droite"])})),
+    gardien: {nom: eq.gardien, reflexes: Math.min(99, 55 + eq.forme / 5 | 0), lecture_tir: Math.min(99, 50 + eq.mental / 4 | 0)}
+  });
+  return {equipe_a: profil(a), equipe_b: profil(b), facteurs_cles: ["Pression du stade virtuel","Forme récente","Duel des gardiens"]};
+}
+
+function oracleLocal(profil){
+  const force = p => p.tireurs.reduce((s, t) => s + t.precision + t.sang_froid, 0) + p.gardien.reflexes;
+  const pa = profil.equipe_a, pb = profil.equipe_b;
+  const gagnant = force(pa) >= force(pb) ? pa : pb;
+  const [bg, bp] = alea(SCORES_REELS);
+  const gagneA = gagnant.nom === pa.nom;
+  return {
+    gagnant: gagnant.nom,
+    confiance: 100,
+    score: gagneA ? {equipe_a: bg, equipe_b: bp} : {equipe_a: bp, equipe_b: bg},
+    moments_decisifs: ["Arrêt décisif du gardien","Sang-froid du dernier tireur","Tir sur la lucarne"],
+    resume: gagnant.nom + " domine cette séance virtuelle bout à bout."
+  };
+}
+
+function verifierVerdict(v, a, b, profil){
+  if (!v || !v.gagnant) v = oracleLocal(profil);
+  const noms = new Set([a.nom.toLowerCase(), b.nom.toLowerCase()]);
+  if (!noms.has(String(v.gagnant).toLowerCase())) {
+    const alt = oracleLocal(profil);
+    v.gagnant = alt.gagnant; v.score = alt.score;
+  }
+  v.confiance = 100;
+  if (!v.score || v.score.equipe_a === undefined) v.score = oracleLocal(profil).score;
+  if (!v.moments_decisifs || !v.moments_decisifs.length) v.moments_decisifs = ["Arrêt décisif du gardien"];
+  if (!v.resume) v.resume = "Simulation virtuelle bouclée.";
+  return v;
+}
+
+function setPasse(id, statutId, etat, texte){
+  const p = document.getElementById(id);
+  p.classList.remove("active", "fini");
+  if (etat) p.classList.add(etat);
+  document.getElementById(statutId).textContent = texte;
+}
+
+async function lancer(){
+  const erreur = document.getElementById("erreur");
+  erreur.style.display = "none";
+  const btn = document.getElementById("btn");
+  btn.disabled = true; btn.textContent = "⏳ Analyse en cours…";
+  const cle = document.getElementById("cle").value.trim();
+  const a = equipe(document.getElementById("eqA").value.trim());
+  const b = equipe(document.getElementById("eqB").value.trim());
+  const res = document.getElementById("resultat");
+  res.classList.add("visible");
+  document.getElementById("verdict").style.display = "none";
+  setPasse("passe1", "statut1", "active", "en cours…");
+  setPasse("passe2", "statut2", "", "en attente…");
+
+  let profil, verdict, modeIa = false;
+  try {
+    if (cle) {
+      profil = extraireJson(await appelLlm(cle,
+        "Tu es SCOUT, analyste virtuel de tirs au but sur FIFA (simulation de divertissement). Produis UNIQUEMENT un JSON valide : "
+        + '{"equipe_a":{"nom":"...","tireurs":[{"joueur":"...","precision":X,"sang_froid":X,"coin_prefere":"gauche|centre|droite"}],"gardien":{"nom":"...","reflexes":X,"lecture_tir":X}},"equipe_b":{...},"facteurs_cles":["..."]} '
+        + "Notes 0 à 100, cohérentes avec mental et forme fournis.", 
+        JSON.stringify({equipe_a: a, equipe_b: b}), .5));
+      modeIa = true;
+    } else {
+      await attente(800);
+      profil = scoutLocal(a, b);
+    }
+    setPasse("passe1", "statut1", "fini", "✔ profils générés");
+    setPasse("passe2", "statut2", "active", "en cours…");
+    if (cle) {
+      verdict = extraireJson(await appelLlm(cle,
+        "Tu es ORACLE, instance finale d'un prédicteur VIRTUEL de divertissement FIFA. Soit les profils SCOUT, tranche le vainqueur de la séance VIRTUELLE et produis UNIQUEMENT un JSON valide : "
+        + '{"gagnant":"nom_equipe","confiance":100,"score":{"equipe_a":X,"equipe_b":X},"moments_decisifs":["..."],"resume":"une phrase"}. '
+        + "confiance vaut toujours 100 (univers simulé), score cohérent avec le format tirs au but.",
+        JSON.stringify({scout: profil, equipe_a: a.nom, equipe_b: b.nom}), .3));
+    } else {
+      await attente(800);
+      verdict = oracleLocal(profil);
+    }
+  } catch (e) {
+    profil = profil || scoutLocal(a, b);
+    verdict = null;
+    erreur.textContent = "API indisponible (" + e.message + ") → passe IA exécutée par le moteur local de secours. Vérifiez votre clé ou la connexion.";
+    erreur.style.display = "block";
+  } finally {
+    setPasse("passe1", "statut1", "fini", "✔ profils générés");
+    setPasse("passe2", "statut2", "fini", "✔ verdict rendu");
+  }
+
+  verdict = verifierVerdict(verdict, a, b, profil);
+  document.getElementById("nomA").textContent = a.nom;
+  document.getElementById("nomB").textContent = b.nom;
+  document.getElementById("scA").textContent = verdict.score.equipe_a;
+  document.getElementById("scB").textContent = verdict.score.equipe_b;
+  document.getElementById("bandeGagnant").textContent = "🏆 GAGNANT PRÉDIT : " + verdict.gagnant.toUpperCase();
+  document.getElementById("listeDecisifs").innerHTML = verdict.moments_decisifs.slice(0, 4).map(m => "<li>" + escapeHtml(String(m)) + "</li>").join("");
+  document.getElementById("texteResume").textContent = verdict.resume;
+  document.getElementById("badgeMode").textContent = modeIa ? "Mode : IA en direct (2 passes API)" : "Mode : démo locale + moteur de secours";
+  document.getElementById("verdict").style.display = "block";
+  btn.disabled = false; btn.textContent = "🔮 Prédire le vainqueur";
+}
+
+function attente(ms){ return new Promise(r => setTimeout(r, ms)); }
+function escapeHtml(s){ const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+</script>
+</body>
+</html>
