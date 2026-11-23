@@ -90,6 +90,10 @@ button:disabled{opacity:.5;cursor:not-allowed;filter:none}
   <label class="etiquette" for="cle">Clé API (recommandé)</label>
   <input type="password" id="cle" placeholder="Collez votre clé API ici (reste dans votre navigateur)">
   <p class="aide">La clé est conservée uniquement dans votre navigateur (localStorage) et envoyée directement à api.mistral.ai. Laissez vide pour le mode démo local.</p>
+  <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button id="btnTest" type="button" style="width:auto;margin:0;padding:9px 16px;font-size:.88rem;background:linear-gradient(90deg,#facc15,#38bdf8)" onclick="testerApi()">🔌 Tester l'API</button>
+    <span id="statutTest" style="font-size:.83rem"></span>
+  </div>
 
   <div class="duo">
     <div>
@@ -286,6 +290,24 @@ async function lancer(){
   document.getElementById("badgeMode").textContent = modeIa ? "Mode : IA en direct (2 passes API)" : "Mode : démo locale + moteur de secours";
   document.getElementById("verdict").style.display = "block";
   btn.disabled = false; btn.textContent = "🔮 Prédire le vainqueur";
+}
+
+async function testerApi(){
+  const cle = document.getElementById("cle").value.trim();
+  const st = document.getElementById("statutTest");
+  st.style.color = "var(--jaune)";
+  if (!cle) { st.textContent = "⛔ Collez d'abord votre clé API"; return; }
+  st.textContent = "⏳ Appel en cours…";
+  const t0 = performance.now();
+  try {
+    const rep = await appelLlm(cle, "Tu réponds en un seul mot.", "Réponds uniquement par OK", 0);
+    const ms = Math.round(performance.now() - t0);
+    st.style.color = "var(--vert)";
+    st.textContent = "✅ API fonctionnelle — réponse : « " + rep.trim().slice(0, 20) + " » en " + ms + " ms";
+  } catch (e) {
+    st.style.color = "var(--rouge)";
+    st.textContent = "⛔ Échec : " + e.message + (String(e.message).includes("fetch") || String(e.message).includes("Failed") ? " (réseau/CORS — lancez via python -m http.server)" : " (vérifiez la clé ou le nom du modèle)");
+  }
 }
 
 function attente(ms){ return new Promise(r => setTimeout(r, ms)); }
